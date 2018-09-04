@@ -90,18 +90,18 @@ mod tests;
 
 /// JWT algorithm used. The only supported algorithm is currently
 /// RS256.
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 enum KeyAlgorithm { RS256 }
 
 /// Type of key contained in a JWT. The only supported key type is
 /// currently RSA.
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 enum KeyType { RSA }
 
 /// Representation of a single JSON Web Key. See [RFC
 /// 7517](https://tools.ietf.org/html/rfc7517#section-4).
 #[allow(dead_code)] // kty & alg only constrain deserialisation, but aren't used
-#[derive(Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct JWK {
     kty: KeyType,
     alg: Option<KeyAlgorithm>,
@@ -116,7 +116,7 @@ pub struct JWK {
 
 /// Representation of a set of JSON Web Keys. See [RFC
 /// 7517](https://tools.ietf.org/html/rfc7517#section-5).
-#[derive(Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct JWKS {
     // This is a vector instead of some kind of map-like structure
     // because key IDs are in fact optional.
