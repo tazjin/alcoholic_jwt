@@ -154,8 +154,29 @@ impl From<ErrorStack> for ValidationError {
 ///
 /// This is only safe if the key set containing the currently allowed
 /// key IDs is fetched from a trusted source.
-pub fn token_kid(jwt: JWT) -> Option<String> {
-    unimplemented!()
+pub fn token_kid(jwt: &JWT) -> JWTResult<Option<String>> {
+    // Fetch the header component of the JWT by splitting it out and
+    // dismissing the rest.
+    let parts: Vec<&str> = jwt.0.splitn(2, '.').collect();
+    if parts.len() != 2 {
+        return Err(ValidationError::MalformedJWT);
+    }
+
+    // The token components are individually base64 decoded, decode
+    // just the first part and deserialise it into the expected
+    // representation.
+    let headers_json = base64::decode_config(parts[0], URL_SAFE)
+        .map_err(|_| ValidationError::MalformedJWT)?;
+
+    #[derive(Deserialize)]
+    struct KidOnly {
+        kid: Option<String>,
+    }
+
+    let kid_only: KidOnly = serde_json::from_slice(&headers_json)
+        .map_err(|_| ValidationError::MalformedJWT)?;
+
+    Ok(kid_only.kid)
 }
 
 /// Validate the signature of a JSON Web Token and optionally apply
