@@ -6,6 +6,7 @@ authors = ["Vincent Ambo <vincent@aprila.no>"]
 keywords = ["jwt", "token", "jwks"]
 categories = ["authentication"]
 license = "GPL-3.0-or-later"
+repository = "https://github.com/aprilabank/alcoholic_jwt"
 
 [dependencies]
 base64 = "0.9"
