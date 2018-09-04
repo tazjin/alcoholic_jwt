@@ -206,10 +206,32 @@ pub fn token_kid(jwt: &JWT) -> JWTResult<Option<String>> {
 /// and if a signature verification passes *all* claim validations are
 /// run and returned.
 ///
+/// If validation succeeds a representation of the token is returned
+/// that contains the header and claims as simple JSON values.
+///
 /// It is the user's task to ensure that the correct JWK is passed in
 /// for validation.
-pub fn validate(jwt: JWT, jwk: JWK, validations: Vec<Validation>) -> JWTResult<()> {
-    unimplemented!()
+pub fn validate(token: String,
+                jwk: &JWK,
+                validations: Vec<Validation>) -> JWTResult<ValidJWT> {
+    let jwt = JWT(token);
+    let public_key = public_key_from_jwk(&jwk)?;
+    validate_jwt_signature(&jwt, public_key)?;
+
+    // Split out all three parts of the JWT this time, deserialising
+    // the first and second as appropriate.
+    let parts: Vec<&str> = jwt.0.splitn(3, '.').collect();
+    if parts.len() != 3 {
+        // This is unlikely considering that validation has already
+        // been performed at this point, but better safe than sorry.
+        return Err(ValidationError::MalformedJWT)
+    }
+
+    let headers = deserialize_part(parts[0])?;
+    let claims = deserialize_part(parts[1])?;
+    let valid_jwt = ValidJWT { headers, claims };
+
+    Ok(valid_jwt)
 }
 
 // Internal implementation
