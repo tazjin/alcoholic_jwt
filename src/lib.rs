@@ -115,6 +115,24 @@ impl JWKS {
 /// 7519](https://tools.ietf.org/html/rfc7519).
 pub struct JWT (String);
 
+/// Representation of a decoded and validated JSON Web Token.
+///
+/// Specific claim fields are only decoded internally in the library
+/// for validation purposes, while it is generally up to the consumer
+/// of the validated JWT what structure they would like to impose.
+pub struct ValidJWT {
+    /// JOSE header of the JSON Web Token. Certain fields are
+    /// guaranteed to be present in this header, consult section 5 of
+    /// RFC7519 for more information.
+    pub headers: Value,
+
+    /// Claims (i.e. primary data) contained in the JSON Web Token.
+    /// While there are several registered and recommended headers
+    /// (consult section 4.1 of RFC7519), the presence of no field is
+    /// guaranteed in these.
+    pub claims: Value,
+}
+
 /// Possible token claim validations. This enumeration only covers
 /// common use-cases, for other types of validations the user is
 /// encouraged to inspect the claim set manually.
