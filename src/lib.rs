@@ -113,7 +113,7 @@ impl JWKS {
 
 /// Representation of an undecoded JSON Web Token. See [RFC
 /// 7519](https://tools.ietf.org/html/rfc7519).
-pub struct JWT (String);
+struct JWT (String);
 
 /// Representation of a decoded and validated JSON Web Token.
 ///
@@ -181,10 +181,10 @@ impl From<serde_json::Error> for ValidationError {
 ///
 /// This is only safe if the key set containing the currently allowed
 /// key IDs is fetched from a trusted source.
-pub fn token_kid(jwt: &JWT) -> JWTResult<Option<String>> {
+pub fn token_kid(token: &str) -> JWTResult<Option<String>> {
     // Fetch the header component of the JWT by splitting it out and
     // dismissing the rest.
-    let parts: Vec<&str> = jwt.0.splitn(2, '.').collect();
+    let parts: Vec<&str> = token.splitn(2, '.').collect();
     if parts.len() != 2 {
         return Err(ValidationError::MalformedJWT);
     }
