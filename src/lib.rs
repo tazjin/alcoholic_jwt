@@ -8,40 +8,44 @@
 //! ## Usage example (token with `kid`-claim)
 //!
 //! ```rust
+//! # extern crate serde_json;
 //! extern crate alcoholic_jwt;
 //!
 //! use alcoholic_jwt::{JWKS, Validation, validate, token_kid};
 //!
-//! fn validate_token() {
-//!     // serde instances provided
-//!     let jwks: JWKS = some_http_client(jwks_url).json();
+//! # fn some_token_fetching_function() -> String {
+//! #   "eyJraWQiOiI4ckRxOFB3MEZaY2FvWFdURVZRbzcrVGYyWXpTTDFmQnhOS1BDZWJhYWk0PSIsImFsZyI6IlJTMjU2IiwidHlwIjoiSldUIn0.eyJpc3MiOiJhdXRoLnRlc3QuYXByaWxhLm5vIiwiaWF0IjoxNTM2MDUwNjkzLCJleHAiOjE1MzYwNTQyOTMsInN1YiI6IjQyIiwiZXh0Ijoic21va2V0ZXN0IiwicHJ2IjoiYXJpc3RpIiwic2NwIjoicHJvY2VzcyJ9.gOLsv98109qLkmRK6Dn7WWRHLW7o8W78WZcWvFZoxPLzVO0qvRXXRLYc9h5chpfvcWreLZ4f1cOdvxv31_qnCRSQQPOeQ7r7hj_sPEDzhKjk-q2aoNHaGGJg1vabI--9EFkFsGQfoS7UbMMssS44dgR68XEnKtjn0Vys-Vzbvz_CBSCH6yQhRLik2SU2jR2L7BoFvh4LGZ6EKoQWzm8Z-CHXLGLUs4Hp5aPhF46dGzgAzwlPFW4t9G4DciX1uB4vv1XnfTc5wqJch6ltjKMde1GZwLR757a8dJSBcmGWze3UNE2YH_VLD7NCwH2kkqr3gh8rn7lWKG4AUIYPxsw9CB".into()
+//! # }
 //!
-//!     let token: String = some_token_fetcher();
+//! # fn jwks_fetching_function() -> JWKS {
+//! #   let jwks_json = "{\"keys\":[{\"kty\":\"RSA\",\"alg\":\"RS256\",\"use\":\"sig\",\"kid\":\"8rDq8Pw0FZcaoXWTEVQo7+Tf2YzSL1fBxNKPCebaai4=\",\"n\":\"l4UTgk1zr-8C8utt0E57DtBV6qqAPWzVRrIuQS2j0_hp2CviaNl5XzGRDnB8gwk0Hx95YOhJupAe6RNq5ok3fDdxL7DLvppJNRLz3Ag9CsmDLcbXgNEQys33fBJaPw1v3GcaFC4tisU5p-o1f5RfWwvwdBtdBfGiwT1GRvbc5sFx6M4iYjg9uv1lNKW60PqSJW4iDYrfqzZmB0zF1SJ0BL_rnQZ1Wi_UkFmNe9arM8W9tI9T3Ie59HITFuyVSTCt6qQEtSfa1e5PiBaVuV3qoFI2jPBiVZQ6LPGBWEDyz4QtrHLdECPPoTF30NN6TSVwwlRbCuUUrdNdXdjYe2dMFQ\",\"e\":\"DhaD5zC7mzaDvHO192wKT_9sfsVmdy8w8T8C9VG17_b1jG2srd3cmc6Ycw-0blDf53Wrpi9-KGZXKHX6_uIuJK249WhkP7N1SHrTJxO0sUJ8AhK482PLF09Qtu6cUfJqY1X1y1S2vACJZItU4Vjr3YAfiVGQXeA8frAf7Sm4O1CBStCyg6yCcIbGojII0jfh2vSB-GD9ok1F69Nmk-R-bClyqMCV_Oq-5a0gqClVS8pDyGYMgKTww2RHgZaFSUcG13KeLMQsG2UOB2OjSC8FkOXK00NBlAjU3d0Vv-IamaLIszO7FQBY3Oh0uxNOvIE9ofQyCOpB-xIK6V9CTTphxw\"}]}";
+//! #   serde_json::from_str(jwks_json).unwrap()
+//! # }
 //!
-//!     // Several types of built-in validations are provided:
-//!     let validations = vec![
-//!       Validation::Issuer("some-issuer"),
-//!       Validation::Audience("some-audience"),
-//!       Validation::SubjectPresent,
-//!     ];
 //!
-//!     // Extracting a KID is about the only safe operation that can be
-//!     // done on a JWT before validating it.
-//!     let kid = token_kid(token).expect("No 'kid' claim present in token");
+//! // The function implied here would usually perform an HTTP-GET
+//! // on the JWKS-URL for an authentication provider and deserialize
+//! // the result into the `alcoholic_jwt::JWKS`-struct.
+//! let jwks: JWKS = jwks_fetching_function();
 //!
-//!     let jwk = jwks.find(kid).expect("Specified key not found in set");
+//! let token: String = some_token_fetching_function();
 //!
-//!     match validate(token, jwk, validations) {
-//!       Valid => println!("Token is valid!"),
-//!       InvalidSignature(reason) => println!("Token signature invalid: {}", reason),
-//!       InvalidClaims(reasons) => {
-//!           println!("Token claims are totally invalid!");
-//!           for reason in reasons {
-//!               println!("Validation failure: {}", reason);
-//!           }
-//!       },
-//!     }
-//! }
+//! // Several types of built-in validations are provided:
+//! let validations = vec![
+//!   Validation::Issuer("some-issuer".into()),
+//!   Validation::Audience("some-audience".into()),
+//!   Validation::SubjectPresent,
+//! ];
+//!
+//! // If a JWKS contains multiple keys, the correct KID first
+//! // needs to be fetched from the token headers.
+//! let kid = token_kid(&token)
+//!     .expect("Failed to decode token headers")
+//!     .expect("No 'kid' claim present in token");
+//!
+//! let jwk = jwks.find(&kid).expect("Specified key not found in set");
+//!
+//! validate(token, jwk, validations).expect("Token validation has failed!");
 //! ```
 //!
 //! [JWKS]: https://tools.ietf.org/html/rfc7517
@@ -136,7 +140,18 @@ pub struct ValidJWT {
 /// Possible token claim validations. This enumeration only covers
 /// common use-cases, for other types of validations the user is
 /// encouraged to inspect the claim set manually.
-pub enum Validation {}
+pub enum Validation {
+    /// Validate that the issuer ("iss") claim matches a specified
+    /// value.
+    Issuer(String),
+
+    /// Validate that the audience ("aud") claim matches a specified
+    /// value.
+    Audience(String),
+
+    /// Validate that a subject value is present.
+    SubjectPresent,
+}
 
 /// Possible results of a token validation.
 #[derive(Debug)]
