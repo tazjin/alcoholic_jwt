@@ -82,6 +82,7 @@ enum KeyType { RSA }
 
 /// Representation of a single JSON Web Key. See [RFC
 /// 7517](https://tools.ietf.org/html/rfc7517#section-4).
+#[allow(dead_code)] // kty & alg only constrain deserialisation, but aren't used
 #[derive(Deserialize)]
 pub struct JWK {
     kty: KeyType,
