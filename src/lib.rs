@@ -55,8 +55,10 @@ extern crate serde_json;
 
 use base64::{decode_config, URL_SAFE};
 use openssl::bn::BigNum;
-use openssl::pkey::Public;
-use openssl::rsa::{Rsa};
+use openssl::pkey::{Public, PKey};
+use openssl::rsa::Rsa;
+use openssl::sign::Verifier;
+use openssl::hash::MessageDigest;
 use openssl::error::ErrorStack;
 
 #[cfg(test)]
@@ -87,8 +89,9 @@ pub struct JWK {
     e: String,
 }
 
-/// Representation of a collection ("set") of JSON Web Keys. See
-/// [RFC 7517](https://tools.ietf.org/html/rfc7517#section-5).
+/// Representation of a set of JSON Web Keys. See [RFC
+/// 7517](https://tools.ietf.org/html/rfc7517#section-5).
+#[derive(Deserialize)]
 pub struct JWKS {
     // This is a vector instead of some kind of map-like structure
     // because key IDs are in fact optional.
@@ -106,9 +109,9 @@ impl JWKS {
     }
 }
 
-/// Representation of a JSON Web Token. See [RFC
+/// Representation of an undecoded JSON Web Token. See [RFC
 /// 7519](https://tools.ietf.org/html/rfc7519).
-pub struct JWT {}
+pub struct JWT (String);
 
 /// Possible token claim validations. This enumeration only covers
 /// common use-cases, for other types of validations the user is
@@ -188,7 +191,37 @@ fn public_key_from_jwk(jwk: &JWK) -> JWTResult<Rsa<Public>> {
     Rsa::from_public_components(jwk_n, jwk_e).map_err(Into::into)
 }
 
+/// Validate the signature on a JWT using a provided public key.
+///
+/// A JWT is made up of three components (headers, claims, signature)
+/// - only the first two are part of the signed data.
+fn validate_jwt_signature(jwt: &JWT, key: Rsa<Public>) -> JWTResult<()> {
+    let key = PKey::from_rsa(key)?;
+    let mut verifier = Verifier::new(MessageDigest::sha256(), &key)?;
 
+    // Split the token from the back to a maximum of two elements.
+    // There are technically three components using the same separator
+    // ('.'), but we are interested in the first two together and
+    // splitting them is unnecessary.
+    let token_parts: Vec<&str> = jwt.0.rsplitn(2, '.').collect();
+    if token_parts.len() != 2 {
+        return Err(ValidationError::MalformedJWT);
+    }
 
+    // Second element of the vector will be the signed payload.
+    let data = token_parts[1];
+
+    // First element of the vector will be the (encoded) signature.
+    let sig_b64 = token_parts[0];
+    let sig = base64::decode_config(sig_b64, URL_SAFE)
+        .map_err(|_| ValidationError::MalformedJWT)?;
+
+    // Verify signature by inserting the payload data and checking it
+    // against the decoded signature.
+    verifier.update(data.as_bytes())?;
+
+    match verifier.verify(&sig)? {
+        true  => Ok(()),
+        false => Err(ValidationError::InvalidSignature),
     }
 }
