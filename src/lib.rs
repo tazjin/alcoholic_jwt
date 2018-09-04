@@ -1,5 +1,9 @@
-//! Implements a library for verifying JSON Web Tokens using the
-//! `RS256` signature algorithm.
+//! Implements a library for for **validation** of **RS256** JWTs
+//! using keys from a JWKS. Nothing more, nothing less.
+//!
+//! The name of the library stems from the potential side-effects of
+//! trying to use the other Rust libraries that are made for similar
+//! purposes.
 //!
 //! This library is specifically aimed at developers that consume
 //! tokens from services which provide their RSA public keys in
@@ -21,8 +25,7 @@
 //! #   let jwks_json = "{\"keys\":[{\"kty\":\"RSA\",\"alg\":\"RS256\",\"use\":\"sig\",\"kid\":\"8rDq8Pw0FZcaoXWTEVQo7+Tf2YzSL1fBxNKPCebaai4=\",\"n\":\"l4UTgk1zr-8C8utt0E57DtBV6qqAPWzVRrIuQS2j0_hp2CviaNl5XzGRDnB8gwk0Hx95YOhJupAe6RNq5ok3fDdxL7DLvppJNRLz3Ag9CsmDLcbXgNEQys33fBJaPw1v3GcaFC4tisU5p-o1f5RfWwvwdBtdBfGiwT1GRvbc5sFx6M4iYjg9uv1lNKW60PqSJW4iDYrfqzZmB0zF1SJ0BL_rnQZ1Wi_UkFmNe9arM8W9tI9T3Ie59HITFuyVSTCt6qQEtSfa1e5PiBaVuV3qoFI2jPBiVZQ6LPGBWEDyz4QtrHLdECPPoTF30NN6TSVwwlRbCuUUrdNdXdjYe2dMFQ\",\"e\":\"DhaD5zC7mzaDvHO192wKT_9sfsVmdy8w8T8C9VG17_b1jG2srd3cmc6Ycw-0blDf53Wrpi9-KGZXKHX6_uIuJK249WhkP7N1SHrTJxO0sUJ8AhK482PLF09Qtu6cUfJqY1X1y1S2vACJZItU4Vjr3YAfiVGQXeA8frAf7Sm4O1CBStCyg6yCcIbGojII0jfh2vSB-GD9ok1F69Nmk-R-bClyqMCV_Oq-5a0gqClVS8pDyGYMgKTww2RHgZaFSUcG13KeLMQsG2UOB2OjSC8FkOXK00NBlAjU3d0Vv-IamaLIszO7FQBY3Oh0uxNOvIE9ofQyCOpB-xIK6V9CTTphxw\"}]}";
 //! #   serde_json::from_str(jwks_json).unwrap()
 //! # }
-//!
-//!
+//! #
 //! // The function implied here would usually perform an HTTP-GET
 //! // on the JWKS-URL for an authentication provider and deserialize
 //! // the result into the `alcoholic_jwt::JWKS`-struct.
