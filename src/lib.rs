@@ -32,8 +32,8 @@
 //!
 //! use alcoholic_jwt::{JWKS, Validation, validate, token_kid};
 //!
-//! # fn some_token_fetching_function() -> String {
-//! #   "eyJraWQiOiI4ckRxOFB3MEZaY2FvWFdURVZRbzcrVGYyWXpTTDFmQnhOS1BDZWJhYWk0PSIsImFsZyI6IlJTMjU2IiwidHlwIjoiSldUIn0.eyJpc3MiOiJhdXRoLnRlc3QuYXByaWxhLm5vIiwiaWF0IjoxNTM2MDUwNjkzLCJleHAiOjE1MzYwNTQyOTMsInN1YiI6IjQyIiwiZXh0Ijoic21va2V0ZXN0IiwicHJ2IjoiYXJpc3RpIiwic2NwIjoicHJvY2VzcyJ9.gOLsv98109qLkmRK6Dn7WWRHLW7o8W78WZcWvFZoxPLzVO0qvRXXRLYc9h5chpfvcWreLZ4f1cOdvxv31_qnCRSQQPOeQ7r7hj_sPEDzhKjk-q2aoNHaGGJg1vabI--9EFkFsGQfoS7UbMMssS44dgR68XEnKtjn0Vys-Vzbvz_CBSCH6yQhRLik2SU2jR2L7BoFvh4LGZ6EKoQWzm8Z-CHXLGLUs4Hp5aPhF46dGzgAzwlPFW4t9G4DciX1uB4vv1XnfTc5wqJch6ltjKMde1GZwLR757a8dJSBcmGWze3UNE2YH_VLD7NCwH2kkqr3gh8rn7lWKG4AUIYPxsw9CB".into()
+//! # fn some_token_fetching_function() -> &'static str {
+//! #   "eyJraWQiOiI4ckRxOFB3MEZaY2FvWFdURVZRbzcrVGYyWXpTTDFmQnhOS1BDZWJhYWk0PSIsImFsZyI6IlJTMjU2IiwidHlwIjoiSldUIn0.eyJpc3MiOiJhdXRoLnRlc3QuYXByaWxhLm5vIiwiaWF0IjoxNTM2MDUwNjkzLCJleHAiOjE1MzYwNTQyOTMsInN1YiI6IjQyIiwiZXh0Ijoic21va2V0ZXN0IiwicHJ2IjoiYXJpc3RpIiwic2NwIjoicHJvY2VzcyJ9.gOLsv98109qLkmRK6Dn7WWRHLW7o8W78WZcWvFZoxPLzVO0qvRXXRLYc9h5chpfvcWreLZ4f1cOdvxv31_qnCRSQQPOeQ7r7hj_sPEDzhKjk-q2aoNHaGGJg1vabI--9EFkFsGQfoS7UbMMssS44dgR68XEnKtjn0Vys-Vzbvz_CBSCH6yQhRLik2SU2jR2L7BoFvh4LGZ6EKoQWzm8Z-CHXLGLUs4Hp5aPhF46dGzgAzwlPFW4t9G4DciX1uB4vv1XnfTc5wqJch6ltjKMde1GZwLR757a8dJSBcmGWze3UNE2YH_VLD7NCwH2kkqr3gh8rn7lWKG4AUIYPxsw9CB"
 //! # }
 //!
 //! # fn jwks_fetching_function() -> JWKS {
@@ -46,7 +46,7 @@
 //! // the result into the `alcoholic_jwt::JWKS`-struct.
 //! let jwks: JWKS = jwks_fetching_function();
 //!
-//! let token: String = some_token_fetching_function();
+//! let token = some_token_fetching_function();
 //!
 //! // Several types of built-in validations are provided:
 //! let validations = vec![
@@ -136,7 +136,7 @@ impl JWKS {
 
 /// Representation of an undecoded JSON Web Token. See [RFC
 /// 7519](https://tools.ietf.org/html/rfc7519).
-struct JWT (String);
+struct JWT<'a> (&'a str);
 
 /// Representation of a decoded and validated JSON Web Token.
 ///
@@ -249,7 +249,7 @@ pub fn token_kid(token: &str) -> JWTResult<Option<String>> {
 ///
 /// It is the user's task to ensure that the correct JWK is passed in
 /// for validation.
-pub fn validate(token: String,
+pub fn validate(token: &str,
                 jwk: &JWK,
                 validations: Vec<Validation>) -> JWTResult<ValidJWT> {
     let jwt = JWT(token);
