@@ -32,8 +32,7 @@
 //!
 //! // Several types of built-in validations are provided:
 //! let validations = vec![
-//!   Validation::Issuer("some-issuer".into()),
-//!   Validation::Audience("some-audience".into()),
+//!   Validation::Issuer("auth.test.aprila.no".into()),
 //!   Validation::SubjectPresent,
 //! ];
 //!
@@ -66,6 +65,7 @@ use openssl::rsa::Rsa;
 use openssl::sign::Verifier;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
+use std::time::{UNIX_EPOCH, Duration, SystemTime};
 
 #[cfg(test)]
 mod tests;
@@ -152,6 +152,10 @@ pub enum Validation {
 
     /// Validate that a subject value is present.
     SubjectPresent,
+
+    /// Validate that the expiry time of the token ("exp"-claim) has
+    /// not yet been reached.
+    NotExpired,
 }
 
 /// Possible results of a token validation.
@@ -174,9 +178,9 @@ pub enum ValidationError {
     /// JSON decoding into a provided type failed.
     JSON(serde_json::Error),
 
-    /// One or more claim validations failed.
-    // TODO: Provide reasons?
-    InvalidClaims,
+    /// One or more claim validations failed. This variant contains
+    /// human-readable validation errors.
+    InvalidClaims(Vec<&'static str>),
 }
 
 type JWTResult<T> = Result<T, ValidationError>;
@@ -242,6 +246,10 @@ pub fn validate(token: String,
         // been performed at this point, but better safe than sorry.
         return Err(ValidationError::MalformedJWT)
     }
+
+    // Perform claim validations before constructing the valid token:
+    let partial_claims = deserialize_part(parts[1])?;
+    validate_claims(partial_claims, validations)?;
 
     let headers = deserialize_part(parts[0])?;
     let claims = deserialize_part(parts[1])?;
@@ -313,5 +321,99 @@ fn validate_jwt_signature(jwt: &JWT, key: Rsa<Public>) -> JWTResult<()> {
     match verifier.verify(&sig)? {
         true  => Ok(()),
         false => Err(ValidationError::InvalidSignature),
+    }
+}
+
+/// Internal helper struct for claims that are relevant for claim
+/// validations.
+#[derive(Deserialize)]
+struct PartialClaims {
+    aud: Option<String>,
+    iss: Option<String>,
+    sub: Option<String>,
+    exp: Option<u64>,
+}
+
+/// Apply a single validation to the claim set of a token.
+fn apply_validation(claims: &PartialClaims,
+                    validation: Validation) -> Result<(), &'static str> {
+    match validation {
+        // Validate that an 'iss' claim is present and matches the
+        // supplied value.
+        Validation::Issuer(iss) => {
+            match claims.iss {
+                None => Err("'iss' claim is missing"),
+                Some(ref claim) => if *claim == iss {
+                    Ok(())
+                } else {
+                    Err("'iss' claim does not match")
+                }
+            }
+        },
+
+        // Validate that an 'aud' claim is present and matches the
+        // supplied value.
+        Validation::Audience(aud) => {
+            match claims.aud {
+                None => Err("'aud' claim is missing"),
+                Some(ref claim) => if *claim == aud {
+                    Ok(())
+                } else {
+                    Err("'aud' claim does not match")
+                }
+            }
+        },
+
+        Validation::SubjectPresent => match claims.sub {
+            Some(_) => Ok(()),
+            None => Err("'sub' claim is missing"),
+        },
+
+        Validation::NotExpired => match claims.exp {
+            None => Err("'exp' claim is missing"),
+            Some(exp) => {
+                // Determine the current timestamp in seconds since
+                // the UNIX epoch.
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    // this is an unrecoverable, critical error. There
+                    // aren't many ways this can occur, other than
+                    // system time being set into the far future or
+                    // this library being used in some sort of future
+                    // museum.
+                    .expect("system time is likely incorrect");
+
+                // Convert the expiry time (which is also in epoch
+                // seconds) to a duration.
+                let exp_duration = Duration::from_secs(exp);
+
+                // The token has not expired if the expiry duration is
+                // larger than (i.e. in the future from) the current
+                // time.
+                if exp_duration > now {
+                    Ok(())
+                } else {
+                    Err("token has expired")
+                }
+            }
+        },
+    }
+}
+
+/// Apply all requested validations to a partial claim set.
+fn validate_claims(claims: PartialClaims,
+                   validations: Vec<Validation>) -> JWTResult<()> {
+    let validation_errors: Vec<_> = validations.into_iter()
+        .map(|v| apply_validation(&claims, v))
+        .filter_map(|result| match result {
+            Ok(_)    => None,
+            Err(err) => Some(err),
+        })
+        .collect();
+
+    if validation_errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidClaims(validation_errors))
     }
 }
