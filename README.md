@@ -1,8 +1,13 @@
 alcoholic_jwt
 =============
 
+[![Build Status](https://travis-ci.org/aprilabank/alcoholic_jwt.svg?branch=master)](https://travis-ci.org/aprilabank/alcoholic_jwt)
+
 This is a library for **validation** of **RS256** JWTs using keys from
 a JWKS. Nothing more, nothing less.
+
+RS256 is the most commonly used asymmetric signature mechanism for
+JWTs, encountered in for example [Google][]'s or [Aprila][]'s APIs.
 
 The name of the library stems from the potential side-effects of
 trying to use the other Rust libraries that are made for similar
@@ -51,5 +56,7 @@ This library aims to only use trustworthy off-the-shelf components to
 do the work. Cryptographic operations are provided by the `openssl`
 crate, JSON-serialisation is provided by `serde_json`.
 
+[Google]: https://www.google.com/
+[Aprila]: https://www.aprila.no/
 [JWKS]: https://tools.ietf.org/html/rfc7517
 [`kid` claim]: https://tools.ietf.org/html/rfc7515#section-4.1.4
