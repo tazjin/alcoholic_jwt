@@ -1,7 +1,7 @@
 [package]
 name = "alcoholic_jwt"
 description = "Library for validation of RS256 JWTs"
-version = "0.1.2"
+version = "1.0.0"
 authors = ["Vincent Ambo <vincent@aprila.no>"]
 keywords = ["jwt", "token", "jwks"]
 categories = ["authentication"]

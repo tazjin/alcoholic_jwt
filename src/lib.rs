@@ -88,7 +88,6 @@ use std::time::{UNIX_EPOCH, Duration, SystemTime};
 #[cfg(test)]
 mod tests;
 
-
 /// URL-safe character set without padding that allows trailing bits,
 /// which appear in some JWT implementations.
 ///
