@@ -359,9 +359,10 @@ fn validate_jwt_signature(jwt: &JWT, key: Rsa<Public>) -> JWTResult<()> {
     // against the decoded signature.
     verifier.update(data.as_bytes())?;
 
-    match verifier.verify(&sig)? {
-        true => Ok(()),
-        false => Err(ValidationError::InvalidSignature),
+    if verifier.verify(&sig)? {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidSignature)
     }
 }
 
