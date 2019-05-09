@@ -370,10 +370,18 @@ fn validate_jwt_signature(jwt: &JWT, key: Rsa<Public>) -> JWTResult<()> {
 /// validations.
 #[derive(Deserialize)]
 struct PartialClaims {
-    aud: Option<String>,
+    aud: Option<Audience>,
     iss: Option<String>,
     sub: Option<String>,
     exp: Option<u64>,
+}
+
+/// Representation of an audience claim.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum Audience {
+    Single(String),
+    List(Vec<String>),
 }
 
 /// Apply a single validation to the claim set of a token.
@@ -396,8 +404,15 @@ fn apply_validation(claims: &PartialClaims, validation: Validation) -> Result<()
         // supplied value.
         Validation::Audience(aud) => match claims.aud {
             None => Err("'aud' claim is missing"),
-            Some(ref claim) => {
+            Some(Audience::Single(ref claim)) => {
                 if *claim == aud {
+                    Ok(())
+                } else {
+                    Err("'aud' claim does not match")
+                }
+            }
+            Some(Audience::List(ref claim)) => {
+                if claim.contains(&aud) {
                     Ok(())
                 } else {
                     Err("'aud' claim does not match")
