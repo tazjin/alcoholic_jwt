@@ -67,23 +67,24 @@
 //!
 //! [JWKS]: https://tools.ietf.org/html/rfc7517
 
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
 extern crate base64;
 extern crate openssl;
 extern crate serde;
 extern crate serde_json;
 
-use base64::{URL_SAFE_NO_PAD, Config, DecodeError};
+use base64::{Config, DecodeError, URL_SAFE_NO_PAD};
 use openssl::bn::BigNum;
 use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
-use openssl::pkey::{Public, PKey};
+use openssl::pkey::{PKey, Public};
 use openssl::rsa::Rsa;
 use openssl::sign::Verifier;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::time::{UNIX_EPOCH, Duration, SystemTime};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[cfg(test)]
 mod tests;
@@ -101,12 +102,16 @@ fn jwt_forgiving() -> Config {
 /// JWT algorithm used. The only supported algorithm is currently
 /// RS256.
 #[derive(Clone, Deserialize, Debug)]
-enum KeyAlgorithm { RS256 }
+enum KeyAlgorithm {
+    RS256,
+}
 
 /// Type of key contained in a JWT. The only supported key type is
 /// currently RSA.
 #[derive(Clone, Deserialize, Debug)]
-enum KeyType { RSA }
+enum KeyType {
+    RSA,
+}
 
 /// Representation of a single JSON Web Key. See [RFC
 /// 7517](https://tools.ietf.org/html/rfc7517#section-4).
@@ -146,7 +151,7 @@ impl JWKS {
 
 /// Representation of an undecoded JSON Web Token. See [RFC
 /// 7519](https://tools.ietf.org/html/rfc7519).
-struct JWT<'a> (&'a str);
+struct JWT<'a>(&'a str);
 
 /// Representation of a decoded and validated JSON Web Token.
 ///
@@ -217,15 +222,21 @@ pub enum ValidationError {
 type JWTResult<T> = Result<T, ValidationError>;
 
 impl From<ErrorStack> for ValidationError {
-    fn from(err: ErrorStack) -> Self { ValidationError::OpenSSL(err) }
+    fn from(err: ErrorStack) -> Self {
+        ValidationError::OpenSSL(err)
+    }
 }
 
 impl From<serde_json::Error> for ValidationError {
-    fn from(err: serde_json::Error) -> Self { ValidationError::JSON(err) }
+    fn from(err: serde_json::Error) -> Self {
+        ValidationError::JSON(err)
+    }
 }
 
 impl From<DecodeError> for ValidationError {
-    fn from(err: DecodeError) -> Self { ValidationError::InvalidBase64(err) }
+    fn from(err: DecodeError) -> Self {
+        ValidationError::InvalidBase64(err)
+    }
 }
 
 /// Attempt to extract the `kid`-claim out of a JWT's header claims.
@@ -266,9 +277,7 @@ pub fn token_kid(token: &str) -> JWTResult<Option<String>> {
 ///
 /// It is the user's task to ensure that the correct JWK is passed in
 /// for validation.
-pub fn validate(token: &str,
-                jwk: &JWK,
-                validations: Vec<Validation>) -> JWTResult<ValidJWT> {
+pub fn validate(token: &str, jwk: &JWK, validations: Vec<Validation>) -> JWTResult<ValidJWT> {
     let jwt = JWT(token);
     let public_key = public_key_from_jwk(&jwk)?;
     validate_jwt_signature(&jwt, public_key)?;
@@ -279,7 +288,7 @@ pub fn validate(token: &str,
     if parts.len() != 3 {
         // This is unlikely considering that validation has already
         // been performed at this point, but better safe than sorry.
-        return Err(ValidationError::InvalidComponents)
+        return Err(ValidationError::InvalidComponents);
     }
 
     // Perform claim validations before constructing the valid token:
@@ -351,7 +360,7 @@ fn validate_jwt_signature(jwt: &JWT, key: Rsa<Public>) -> JWTResult<()> {
     verifier.update(data.as_bytes())?;
 
     match verifier.verify(&sig)? {
-        true  => Ok(()),
+        true => Ok(()),
         false => Err(ValidationError::InvalidSignature),
     }
 }
@@ -367,15 +376,14 @@ struct PartialClaims {
 }
 
 /// Apply a single validation to the claim set of a token.
-fn apply_validation(claims: &PartialClaims,
-                    validation: Validation) -> Result<(), &'static str> {
+fn apply_validation(claims: &PartialClaims, validation: Validation) -> Result<(), &'static str> {
     match validation {
         // Validate that an 'iss' claim is present and matches the
         // supplied value.
-        Validation::Issuer(iss) => {
-            match claims.iss {
-                None => Err("'iss' claim is missing"),
-                Some(ref claim) => if *claim == iss {
+        Validation::Issuer(iss) => match claims.iss {
+            None => Err("'iss' claim is missing"),
+            Some(ref claim) => {
+                if *claim == iss {
                     Ok(())
                 } else {
                     Err("'iss' claim does not match")
@@ -385,10 +393,10 @@ fn apply_validation(claims: &PartialClaims,
 
         // Validate that an 'aud' claim is present and matches the
         // supplied value.
-        Validation::Audience(aud) => {
-            match claims.aud {
-                None => Err("'aud' claim is missing"),
-                Some(ref claim) => if *claim == aud {
+        Validation::Audience(aud) => match claims.aud {
+            None => Err("'aud' claim is missing"),
+            Some(ref claim) => {
+                if *claim == aud {
                     Ok(())
                 } else {
                     Err("'aud' claim does not match")
@@ -433,12 +441,12 @@ fn apply_validation(claims: &PartialClaims,
 }
 
 /// Apply all requested validations to a partial claim set.
-fn validate_claims(claims: PartialClaims,
-                   validations: Vec<Validation>) -> JWTResult<()> {
-    let validation_errors: Vec<_> = validations.into_iter()
+fn validate_claims(claims: PartialClaims, validations: Vec<Validation>) -> JWTResult<()> {
+    let validation_errors: Vec<_> = validations
+        .into_iter()
         .map(|v| apply_validation(&claims, v))
         .filter_map(|result| match result {
-            Ok(_)    => None,
+            Ok(_) => None,
             Err(err) => Some(err),
         })
         .collect();
